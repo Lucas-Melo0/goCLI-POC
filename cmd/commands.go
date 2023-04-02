@@ -3,16 +3,19 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 	"webcli/utils"
 )
+
+var TrackedWebsites = make([]string, 0)
 
 func StartApp() {
 	commands := Commands{"Commands": "commands", "Insert": "insert", "Delete": "delete", "List": "list", "Exit": "exit"}
 
 	// Slice to store the tracked websites
-	trackedWebsites := make([]string, 0)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -37,8 +40,9 @@ func StartApp() {
 				continue
 			}
 			website := words[1]
-			trackedWebsites = append(trackedWebsites, website)
+			TrackedWebsites = append(TrackedWebsites, website)
 			fmt.Printf("Website %s has been added to tracking\n", website)
+			go checkWebsite(website)
 		}
 		if command == commands["Delete"] {
 			if len(words) < 2 {
@@ -46,9 +50,9 @@ func StartApp() {
 				continue
 			}
 			websiteFound := false
-			for i, v := range trackedWebsites {
+			for i, v := range TrackedWebsites {
 				if v == words[1] {
-					trackedWebsites = utils.Delete(trackedWebsites, i)
+					TrackedWebsites = utils.Delete(TrackedWebsites, i)
 					websiteFound = true
 					break
 				}
@@ -61,7 +65,7 @@ func StartApp() {
 		}
 		if command == commands["List"] {
 			fmt.Println("Listing all the tracked websites")
-			for i, website := range trackedWebsites {
+			for i, website := range TrackedWebsites {
 				fmt.Printf("%d: %s\n", i+1, website)
 			}
 		}
@@ -69,6 +73,25 @@ func StartApp() {
 			for _, value := range commands {
 				fmt.Printf("%v\n", value)
 			}
+		}
+
+	}
+
+}
+
+func checkWebsite(site string) {
+	for range time.Tick(10 * time.Second) {
+		resp, err := http.Get(site)
+		if err != nil {
+			fmt.Printf("Error checking %s: %s\n", site, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			fmt.Printf("Website %s is up and running!\n", site)
+		} else {
+			fmt.Printf("Website %s is down. Status code: %d\n", site, resp.StatusCode)
 		}
 	}
 }

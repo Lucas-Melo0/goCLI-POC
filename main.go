@@ -1,7 +1,10 @@
 package main
 
-import "webcli/cmd"
+import (
+	"webcli/cmd"
+)
 
 func main() {
 	cmd.StartApp()
+
 }
